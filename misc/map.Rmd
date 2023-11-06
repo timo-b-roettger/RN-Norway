@@ -1,0 +1,181 @@
+---
+title: "NORRN map"
+author: "Timo Roettger"
+date: "2022-09-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, ggtext, ggmap, drat)
+
+#drat::addRepo("sykdomspulsen-org")
+#install.packages("spldata")
+#install.packages("splmaps")
+
+# set the current working directory to the one where this file is
+current_working_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+setwd(current_working_dir)
+
+# define colors
+purple = "#4E5083"
+pink = "#D82E8A"
+
+```
+
+## Create Map of Norwa
+
+```{r}
+
+# following guide from here: https://danielroelfs.com/blog/the-easier-way-to-create-a-map-of-norway-using-splmaps/
+
+data(package = "splmaps") %>% 
+  pluck("results") %>% 
+  as_tibble() %>% 
+  select(Item,Title) %>% 
+  print(n = 18)
+
+# load in manual data
+map_data <- read_csv("map_data.csv") 
+
+map_df <- splmaps::nor_nuts3_map_b2020_default_dt %>% 
+  glimpse()
+```
+
+```{r}
+
+norrn_map <- 
+map_df %>% 
+  ggplot(aes(x = long, 
+             y = lat, 
+             group = group)) + 
+  geom_polygon(key_glyph = "point",
+               fill = "lightgrey") + 
+  geom_point(data = map_data,
+             aes(x = long,
+                 y = lat,
+                 size = 15 * size,
+                 color = as.factor(inst_lead)),
+             position = position_dodge2(width = 0.5,
+                                        preserve = "single"),
+             inherit.aes = FALSE,
+             shape = 19,
+             show.legend = FALSE) +
+  geom_point(data = map_data %>% filter(local_lead == 1),
+             aes(x = long, 
+                 y = lat,                
+                 size = 5* size), 
+             position = position_dodge2(width = 0.5,
+                                        preserve = "single"),
+             inherit.aes = FALSE,
+             shape = 21, 
+             color = "black", 
+             fill = pink,
+             show.legend = FALSE) +
+  scale_x_continuous(limits = c(0,35)) +
+  scale_y_continuous(limits = c(55,73)) +
+  scale_color_manual(values = c(alpha("white", 0), purple)) +
+  ggrepel::geom_label_repel(data = map_data, 
+                            aes(x = long, y = lat, label = place),
+                            size = 3, 
+                            position = position_dodge2(width = 0.5, 
+                                        preserve = "single"),
+                            box.padding = 0.9, max.overlaps = Inf,
+                            label.size = 0, 
+                            inherit.aes = FALSE) +
+  labs(x = NULL,
+       y = NULL,
+       fill = NULL) +
+  coord_map(projection = "conic", lat0 = 60) + 
+  annotate("text", 
+           x = 25, 
+           y = 58, 
+           size = 2,
+           color = "grey",
+           hjust = 0,
+           label = paste0("generated on ",Sys.Date())) +
+  theme_void() +
+  theme(legend.position = c(0.2,0.7),
+        legend.text = element_text(size = 5),
+        legend.key.height = unit(10,"pt"))
+norrn_map
+
+# store as .pdf in your working directory
+ggsave(filename = "NORRN_plot.png",
+       plot = norrn_map,
+       device = "png",
+       width = 140, 
+       height = 140,
+       units = "mm", 
+       dpi = 300)
+
+```
+
+```{r}
+
+norrn_map_notext <- 
+map_df %>% 
+  ggplot(aes(x = long, 
+             y = lat, 
+             group = group)) + 
+  geom_polygon(key_glyph = "point",
+               fill = "lightgrey") + 
+  geom_point(data = map_data,
+             aes(x = long,
+                 y = lat,
+                 size = 15 * size,
+                 color = as.factor(inst_lead)),
+             position = position_dodge2(width = 0.5,
+                                        preserve = "single"),
+             inherit.aes = FALSE,
+             shape = 19,
+             show.legend = FALSE) +
+  geom_point(data = map_data %>% filter(local_lead == 1),
+             aes(x = long, 
+                 y = lat,                
+                 size = 5* size), 
+             position = position_dodge2(width = 0.5,
+                                        preserve = "single"),
+             inherit.aes = FALSE,
+             shape = 21, 
+             color = "black", 
+             fill = pink,
+             show.legend = FALSE) +
+  scale_x_continuous(limits = c(0,35)) +
+  scale_y_continuous(limits = c(55,73)) +
+  scale_color_manual(values = c(alpha("white", 0), purple)) +
+  labs(x = NULL,
+       y = NULL,
+       fill = NULL) +
+  coord_map(projection = "conic", lat0 = 60) + 
+  annotate("text", 
+           x = 25, 
+           y = 58, 
+           size = 2,
+           color = "grey",
+           hjust = 0,
+           label = paste0("generated on ",Sys.Date())) +
+  theme_void() +
+  theme(legend.position = c(0.2,0.7),
+        legend.text = element_text(size = 5),
+        legend.key.height = unit(10,"pt"))
+norrn_map_notext
+
+# store as .pdf in your working directory
+ggsave(filename = "NORRN_plot_notext.png",
+       plot = norrn_map_notext,
+       device = "png",
+       width = 140, 
+       height = 140,
+       units = "mm", 
+       dpi = 300)
+
+```
+
